@@ -9,33 +9,62 @@ An immersive, AI-powered mock interview coaching platform that helps job seekers
 The application consists of a **React frontend** built with **Vite**, a **Node.js + Express backend**, and **Google Gemini 3.5 Flash** for AI-powered interview evaluation.
 
 ```mermaid
-flowchart LR
+flowchart TB
 
-subgraph Client["🖥️ Frontend (React + Vite)"]
-    Dashboard["Dashboard"]
-    Setup["Interview Setup"]
-    Room["Interview Room"]
-    Report["Feedback Report"]
+%% ================= CLIENT =================
+subgraph CLIENT["Client-Side (Port 5173)"]
+
+direction TB
+
+subgraph UI[" "]
+direction LR
+FB["Feedback Dashboard"]
+SM["Setup Modal"]
+IR["Interview Room"]
+DB["Dashboard"]
 end
 
-subgraph Backend["⚙️ Backend (Node.js + Express)"]
-    API["REST API Server"]
-    NLP["Local NLP Analyzer"]
-    Storage[("Session JSON Storage")]
+STT["Web Speech API STT"]
+TTS["Web SpeechSynthesis TTS"]
+
+APP["React App (App.jsx)"]
+
+IR --> STT
+APP --> TTS
+
+STT --> APP
+TTS --> APP
+
 end
 
-subgraph AI["🤖 Google AI"]
-    Gemini["Gemini 3.5 Flash"]
+%% ================= SERVER =================
+subgraph SERVER["Server-Side (Port 5001)"]
+
+direction TB
+
+API["Express API Server (server.js)"]
+
+direction LR
+
+JSON[("Local JSON Files (data/)")]
+NLP["Local JS NLP Analyzer (analyzer.js)"]
+
+JSON -->|Saves/Reads| API
+API -->|Invokes| NLP
+
 end
 
-Dashboard --> Setup
-Setup -->|"Create Session"| API
-Room -->|"Submit Answer"| API
-API --> NLP
-API --> Storage
-API --> Gemini
-Gemini --> API
-API --> Report
+%% ================= GOOGLE =================
+subgraph GOOGLE["Google Cloud API"]
+
+direction TB
+
+GEMINI["Gemini 3.5 Flash Model"]
+
+end
+
+APP <-->|REST HTTP Requests| API
+API <-->|Google Generative AI SDK| GEMINI
 ```
 
 ### Data & Execution Flow
