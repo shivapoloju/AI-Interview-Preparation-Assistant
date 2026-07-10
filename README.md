@@ -1,80 +1,61 @@
-# AI Interview Preparation Assistant
+<p align="center">
+  <img src="https://raw.githubusercontent.com/shivapoloju/AI-Interview-Preparation-Assistant/main/frontend/public/logo.png" width="160" alt="AI Interview Coach Logo"/>
+</p>
 
-An immersive, AI-powered mock interview coaching platform that helps job seekers practice and refine their technical, behavioral, and system design communication skills. The application generates adaptive interview questions matching specific jobs, records response transcripts, and offers immediate analytical communication feedback alongside content scores powered by Google's Gemini 3.5 Flash model.
+<h1 align="center">AI Interview Preparation Assistant</h1>
+
+<p align="center">
+  <strong>An immersive, ultra-responsive mock interview coaching platform designed to help candidates master technical, behavioral, and system design communication skills.</strong>
+</p>
+
+<p align="center">
+  <a href="https://ai-interview-preparation-assistant-two.vercel.app/"><strong>⚡ View Live Application</strong></a>
+</p>
 
 ---
 
 ## 🏗️ End-to-End System Architecture
 
-The application consists of a **React frontend** built with **Vite**, a **Node.js + Express backend**, and **Google Gemini 3.5 Flash** for AI-powered interview evaluation.
+The application is structured into a modular monorepo containing a high-performance **React frontend client** built using Vite and a stateless **Node.js Express backend API** server. AI evaluations are powered by the **Groq LPU Inference Engine** using the **Llama 3.3 70B** reasoning model, while speech analytics are processed locally in JavaScript.
 
 ```mermaid
-flowchart TB
+graph TD
+    subgraph "Client-Side (Vercel CDN)"
+        A["React App (App.jsx)"]
+        A1["Dashboard"]
+        A2["Setup Modal"]
+        A3["Interview Room"]
+        A4["Feedback Dashboard"]
+        
+        A3 -->|"Web Speech API STT"| A
+        A -->|"Web SpeechSynthesis TTS"| A3
+    end
 
-%% ================= CLIENT =================
-subgraph CLIENT["Client-Side (Port 5173)"]
+    subgraph "Server-Side (Render API Host)"
+        B["Express API Server (server.js)"]
+        C["Local JS NLP Analyzer (analyzer.js)"]
+        D[("Local JSON Files (data/)")]
+        
+        B -->|Invokes| C
+        B ---|Saves/Reads| D
+    end
 
-direction TB
+    subgraph "Groq LPU Cloud"
+        E["Llama 3.3 70B Versatile Model"]
+    end
 
-subgraph UI[" "]
-direction LR
-FB["Feedback Dashboard"]
-SM["Setup Modal"]
-IR["Interview Room"]
-DB["Dashboard"]
-end
-
-STT["Web Speech API STT"]
-TTS["Web SpeechSynthesis TTS"]
-
-APP["React App (App.jsx)"]
-
-IR --> STT
-APP --> TTS
-
-STT --> APP
-TTS --> APP
-
-end
-
-%% ================= SERVER =================
-subgraph SERVER["Server-Side (Port 5001)"]
-
-direction TB
-
-API["Express API Server (server.js)"]
-
-direction LR
-
-JSON[("Local JSON Files (data/)")]
-NLP["Local JS NLP Analyzer (analyzer.js)"]
-
-JSON -->|Saves/Reads| API
-API -->|Invokes| NLP
-
-end
-
-%% ================= GOOGLE =================
-subgraph GOOGLE["Google Cloud API"]
-
-direction TB
-
-GEMINI["Gemini 3.5 Flash Model"]
-
-end
-
-APP <-->|REST HTTP Requests| API
-API <-->|Google Generative AI SDK| GEMINI
+    A ---|"REST HTTP Requests"| B
+    B ---|"Groq SDK"| E
 ```
 
-### Data & Execution Flow
-1. **Setup**: The candidate selects their target role, difficulty level, interview type, and pastes a job description. The frontend sends this to `POST /api/sessions`.
-2. **Question Generation**: The backend server interfaces with Gemini 3.5 Flash to generate a custom, context-aware initial question. The session status is saved in a local JSON file under `backend/data/` and returned to the client.
-3. **Dialogue Room**: The client reads the question aloud using the browser's native **Speech Synthesis API**. The user records their reply via the browser's native **Speech Recognition API** (Web Speech API) or type their edit in the editor.
+### Data & Evaluation Flow
+1. **Setup**: The candidate customizes their target role, difficulty level, interview type, and target job description. The frontend issues a `POST /api/sessions` call.
+2. **Question Generation**: The backend server calls Groq to generate a context-aware initial question using Llama 3.3 70B. The session is saved locally as JSON and returned.
+3. **Dialogue Room**: The client reads the question aloud using the browser's native **Speech Synthesis API**. The user records their reply via the browser's native **Speech Recognition API** (Web Speech API) or edits transcripts manually.
 4. **Answer Evaluation**: Submitting the answer triggers `POST /api/sessions/:id/answer`. The backend performs two parallel actions:
    * **Static NLP Analytics**: Evaluates filler word density, pace (words per minute), lexical diversity (Type-Token Ratio), sentence structure, and tone confidence indices locally in JavaScript.
-   * **Gemini Evaluation**: Instructs Gemini (using `responseMimeType: "application/json"`) to grade the response quality, list strengths/weaknesses, write a model STAR-method answer, and generate the next interview question.
-5. **Grading & Reporting**: After completing all questions (or choosing to exit early), the user triggers `POST /api/sessions/:id/end`. Gemini compiles an overall report outlining key strengths, overall weaknesses, and a structured, actionable preparation roadmap.
+   * **Llama 3.3 70B Evaluation**: Instructs the Groq LPU engine (in JSON mode) to grade the response quality, list strengths/weaknesses, write a model STAR-method answer, and generate the next interview question.
+5. **Grading & Reporting**: After completing all questions (or choosing to exit early), the user triggers `POST /api/sessions/:id/end`. Llama 3.3 70B compiles an overall report outlining key strengths, weaknesses, and a structured, actionable preparation roadmap.
 
 ---
 
@@ -98,18 +79,21 @@ API <-->|Google Generative AI SDK| GEMINI
 ```
 ai-interview-assistant/
 ├── backend/
-│   ├── .env                       # Backend Gemini API Key configuration
+│   ├── .env                       # Backend Groq API Key configuration
 │   ├── analyzer.js                # Speech NLP and communication analytics parser
-│   ├── package.json               # Server dependencies (Express, CORS, Generative AI SDK)
+│   ├── package.json               # Server dependencies (Express, CORS, Groq SDK)
 │   ├── server.js                  # Express API routes, session manager, and JSON DB coordinator
-│   └── data/                      # JSON files containing session history (auto-generated)
+│   └── data/                      # JSON files containing session history (local)
 ├── frontend/
 │   ├── index.html                 # Font styles and HTML skeleton
 │   ├── package.json               # React UI dependencies
-│   ├── vite.config.js             # Proxies all client requests to localhost:5001
+│   ├── vercel.json                # API Rewrite rule redirecting /api/* calls to Render
+│   ├── vite.config.js             # Proxies all client requests to localhost:5001 during dev
+│   ├── public/
+│   │   └── logo.png               # Centered repository header asset
 │   └── src/
 │       ├── main.jsx
-│       ├── index.css              # Custom Vanila CSS design system (Glassmorphism layout)
+│       ├── index.css              # Custom Vanilla CSS design system (Glassmorphism layout)
 │       ├── App.jsx                # Main coordinator component and layout views
 │       └── components/
 │           ├── Dashboard.jsx      # Overall stats overview and history list
@@ -118,7 +102,7 @@ ai-interview-assistant/
 │           ├── FeedbackReport.jsx # Overall metrics dashboards and study roadmap
 │           ├── CircularProgress.jsx # Animated circular progress gauge components
 │           └── AudioVisualizer.jsx  # Waveform simulators for mic/speaking indicators
-└── run.bat                        # Launcher script to boot both servers in separate windows
+└── run.bat                        # Launcher script to boot both servers in separate windows locally
 ```
 
 ---
@@ -127,16 +111,16 @@ ai-interview-assistant/
 
 ### Prerequisites
 * **Node.js** (v18+ recommended)
-* A **Gemini API Key** from [Google AI Studio](https://aistudio.google.com/)
+* A **Groq API Key** from [Groq Console](https://console.groq.com/keys)
 
 ### 1. Configure the API Key
 Navigate to `backend/.env` and paste your key:
 ```env
-GEMINI_API_KEY=API
+GROQ_API_KEY=gsk_...
 ```
-*(The server reads this environment variable to authenticate requests with Google's API).*
+*(The server reads this environment variable to authenticate requests with Groq's LPU engine).*
 
-### 2. Launch the Application
+### 2. Launch the Application Locally
 At the root of the project directory, double-click **`run.bat`** (on Windows). 
 This launcher script automatically opens two separate command prompt windows to boot:
 * **Express Server** on [http://localhost:5001](http://localhost:5001)
@@ -147,5 +131,5 @@ Open your browser to **[http://localhost:5173/](http://localhost:5173/)** and st
 ---
 
 ## 🔒 Security & Privacy
-* Your API key is stored locally in your backend's environment variables (`.env`).
-* Interview histories are saved locally as `.json` files in the `backend/data/` folder. No third-party databases are used, ensuring your mock interview answers stay private to your local computer.
+* Your API key is stored locally in your backend's environment variables (`.env`) or securely on your Render.com variables.
+* Interview histories are saved locally as `.json` files in the `backend/data/` folder. No third-party databases are used, ensuring your mock interview answers stay private.
