@@ -13,7 +13,19 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
     actionablePlan: []
   };
 
-  const completedQA = session.questions.filter(q => q.answer !== null);
+  const keyStrengths = Array.isArray(report.keyStrengths)
+    ? report.keyStrengths
+    : (typeof report.keyStrengths === 'string' && report.keyStrengths ? [report.keyStrengths] : []);
+
+  const keyWeaknesses = Array.isArray(report.keyWeaknesses)
+    ? report.keyWeaknesses
+    : (typeof report.keyWeaknesses === 'string' && report.keyWeaknesses ? [report.keyWeaknesses] : []);
+
+  const actionablePlan = Array.isArray(report.actionablePlan)
+    ? report.actionablePlan
+    : (typeof report.actionablePlan === 'string' && report.actionablePlan ? [report.actionablePlan] : []);
+
+  const completedQA = (session.questions || []).filter(q => q.answer !== null);
 
   // Compute average communication metrics across all answered questions
   const totalWords = completedQA.reduce((acc, q) => acc + (q.communication?.wordCount || 0), 0);
@@ -103,9 +115,9 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
             <h3 style={{ fontSize: '1.2rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem', color: '#6ee7b7' }}>
               <CheckCircle size={18} /> Major Strengths
             </h3>
-            {report.keyStrengths?.length > 0 ? (
+            {keyStrengths.length > 0 ? (
               <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.4' }}>
-                {report.keyStrengths.map((str, idx) => <li key={idx}>{str}</li>)}
+                {keyStrengths.map((str, idx) => <li key={idx}>{str}</li>)}
               </ul>
             ) : (
               <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>No evaluation records found.</p>
@@ -117,9 +129,9 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
             <h3 style={{ fontSize: '1.2rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem', color: '#fda4af' }}>
               <AlertTriangle size={18} /> Areas for Improvement
             </h3>
-            {report.keyWeaknesses?.length > 0 ? (
+            {keyWeaknesses.length > 0 ? (
               <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.4' }}>
-                {report.keyWeaknesses.map((weak, idx) => <li key={idx}>{weak}</li>)}
+                {keyWeaknesses.map((weak, idx) => <li key={idx}>{weak}</li>)}
               </ul>
             ) : (
               <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>No evaluation records found.</p>
@@ -136,7 +148,7 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
             Follow these custom steps designed by our AI coach to polish your skills before your next live interview:
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
-            {report.actionablePlan?.map((plan, idx) => (
+            {actionablePlan.map((plan, idx) => (
               <div key={idx} style={{
                 display: 'flex',
                 gap: '12px',
