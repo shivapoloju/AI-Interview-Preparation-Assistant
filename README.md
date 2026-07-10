@@ -9,7 +9,17 @@
 </p>
 
 <p align="center">
-  <a href="https://ai-interview-preparation-assistant-two.vercel.app/"><strong>⚡ View Live Application</strong></a>
+  <a href="https://ai-interview-preparation-assistant-two.vercel.app/" target="_blank">
+    <img src="https://img.shields.io/badge/Live_Demo-⚡_Try_It_Now-6366F1?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo"/>
+  </a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Frontend-React%20%7C%20Vite%20%7C%20CSS-blue?style=flat-square" alt="Frontend"/>
+  &nbsp;
+  <img src="https://img.shields.io/badge/Backend-Node%20%7C%20Express-green?style=flat-square" alt="Backend"/>
+  &nbsp;
+  <img src="https://img.shields.io/badge/AI_Engine-Groq%20%7C%20Llama_3.3-orange?style=flat-square" alt="AI Engine"/>
 </p>
 
 ---
