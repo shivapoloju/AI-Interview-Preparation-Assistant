@@ -40,6 +40,18 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
     ? Math.round(completedQA.reduce((acc, q) => acc + (q.communication?.confidenceScore || 0), 0) / completedQA.length)
     : 0;
 
+  const renderSafeText = (val) => {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    if (Array.isArray(val)) return val.map(renderSafeText).join('\n');
+    if (typeof val === 'object') {
+      return Object.entries(val)
+        .map(([key, value]) => `${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`)
+        .join('\n');
+    }
+    return String(val);
+  };
+
   // Aggregate filler words breakdown
   const aggregatedFillers = {};
   completedQA.forEach(q => {
@@ -98,8 +110,8 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
             {session.level} {session.role} • {session.category}
           </span>
           <h1 style={{ fontSize: '2rem', marginBottom: '0.75rem', fontWeight: '800' }}>Performance Evaluation</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: '1.6' }}>
-            {report.summary}
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+            {renderSafeText(report.summary)}
           </p>
         </div>
       </div>
@@ -117,7 +129,7 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
             </h3>
             {keyStrengths.length > 0 ? (
               <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.4' }}>
-                {keyStrengths.map((str, idx) => <li key={idx}>{str}</li>)}
+                {keyStrengths.map((str, idx) => <li key={idx}>{renderSafeText(str)}</li>)}
               </ul>
             ) : (
               <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>No evaluation records found.</p>
@@ -131,7 +143,7 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
             </h3>
             {keyWeaknesses.length > 0 ? (
               <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.4' }}>
-                {keyWeaknesses.map((weak, idx) => <li key={idx}>{weak}</li>)}
+                {keyWeaknesses.map((weak, idx) => <li key={idx}>{renderSafeText(weak)}</li>)}
               </ul>
             ) : (
               <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>No evaluation records found.</p>
@@ -172,7 +184,7 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
                   {idx + 1}
                 </div>
                 <div style={{ fontSize: '0.95rem', lineHeight: '1.4', color: 'var(--text-primary)' }}>
-                  {plan}
+                  {renderSafeText(plan)}
                 </div>
               </div>
             ))}
@@ -388,15 +400,15 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', flexWrap: 'wrap' }}>
                   <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
                     <h5 style={{ fontSize: '0.85rem', fontWeight: '700', color: '#6ee7b7', marginBottom: '6px' }}>Content Strengths</h5>
-                    <p style={{ fontSize: '0.9rem', lineHeight: '1.4', color: 'var(--text-secondary)' }}>
-                      {completedQA[activeTab].feedback?.strengths || 'N/A'}
+                    <p style={{ fontSize: '0.9rem', lineHeight: '1.4', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                      {renderSafeText(completedQA[activeTab].feedback?.strengths) || 'N/A'}
                     </p>
                   </div>
                   
                   <div style={{ background: 'rgba(244, 63, 94, 0.05)', border: '1px solid rgba(244, 63, 94, 0.15)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
                     <h5 style={{ fontSize: '0.85rem', fontWeight: '700', color: '#fda4af', marginBottom: '6px' }}>Areas for Growth</h5>
-                    <p style={{ fontSize: '0.9rem', lineHeight: '1.4', color: 'var(--text-secondary)' }}>
-                      {completedQA[activeTab].feedback?.weaknesses || 'N/A'}
+                    <p style={{ fontSize: '0.9rem', lineHeight: '1.4', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                      {renderSafeText(completedQA[activeTab].feedback?.weaknesses) || 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -405,8 +417,8 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
                   <h5 style={{ fontSize: '0.9rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--primary)' }}>
                     <Star size={16} /> How to Improve Your Answer
                   </h5>
-                  <p style={{ fontSize: '0.92rem', lineHeight: '1.5', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    {completedQA[activeTab].feedback?.improvement}
+                  <p style={{ fontSize: '0.92rem', lineHeight: '1.5', color: 'var(--text-secondary)', marginTop: '4px', whiteSpace: 'pre-wrap' }}>
+                    {renderSafeText(completedQA[activeTab].feedback?.improvement)}
                   </p>
                 </div>
 
@@ -427,7 +439,7 @@ const FeedbackReport = ({ session, onBackToDashboard, onRetake }) => {
                       color: 'var(--text-secondary)',
                       whiteSpace: 'pre-wrap'
                     }}>
-                      {completedQA[activeTab].modelAnswer}
+                      {renderSafeText(completedQA[activeTab].modelAnswer)}
                     </div>
                   </div>
                 )}
