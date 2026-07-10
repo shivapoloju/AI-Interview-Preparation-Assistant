@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { analyzeResponse } from './analyzer.js';
 
 dotenv.config();
@@ -24,14 +24,13 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
-// Helper to get Gemini Client
-function getGeminiModel(req) {
-  const apiKey = process.env.GEMINI_API_KEY;
+// Helper to get OpenAI Client
+function getOpenAIClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('API_KEY_MISSING');
   }
-  const genAI = new GoogleGenerativeAI(apiKey);
-  return genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+  return new OpenAI({ apiKey });
 }
 
 // 1. Start a Session
@@ -39,12 +38,12 @@ app.post('/api/sessions', async (req, res) => {
   try {
     const { role, level, category, jobDescription, maxQuestions = 5 } = req.body;
     
-    let model;
+    let openai;
     try {
-      model = getGeminiModel(req);
+      openai = getOpenAIClient();
     } catch (err) {
       if (err.message === 'API_KEY_MISSING') {
-        return res.status(401).json({ error: 'Gemini API Key is missing. Please configure it in your settings.' });
+        return res.status(401).json({ error: 'OpenAI API Key is missing. Please configure it in your backend environment.' });
       }
       throw err;
     }
@@ -53,16 +52,19 @@ app.post('/api/sessions', async (req, res) => {
 Your task is to conduct a realistic, professional, and conversational mock interview for the candidate.
 Role: ${level} ${role}
 Interview Category: ${category}
-${jobDescription ? `Job Description:\n${jobDescription}` : ''}
+${jobDescription ? `Job Description:\n${jobDescription}` : ''}`;
 
-Generate the first realistic, challenging, and suitable interview question.
-Do NOT include any introduction like "Hello, welcome to your interview." Just output the question itself. Keep the question under 50 words.`;
-
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: 'Generate the first realistic, challenging, and suitable interview question. Do NOT include any introduction like "Hello, welcome to your interview." Just output the question itself. Keep the question under 50 words.' }
+      ],
+      temperature: 0.7,
+      max_tokens: 150
     });
 
-    const firstQuestion = result.response.text().trim();
+    const firstQuestion = response.choices[0].message.content.trim();
     const sessionId = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
     
     const session = {
@@ -113,12 +115,12 @@ app.post('/api/sessions/:id/answer', async (req, res) => {
       return res.status(400).json({ error: 'Session is already finished' });
     }
 
-    let model;
+    let openai;
     try {
-      model = getGeminiModel(req);
+      openai = getOpenAIClient();
     } catch (err) {
       if (err.message === 'API_KEY_MISSING') {
-        return res.status(401).json({ error: 'Gemini API Key is missing. Please configure it in your settings.' });
+        return res.status(401).json({ error: 'OpenAI API Key is missing. Please configure it in your backend environment.' });
       }
       throw err;
     }
@@ -129,7 +131,7 @@ app.post('/api/sessions/:id/answer', async (req, res) => {
     // Run local communication & NLP analysis (filler words, pace, lexical diversity, tone)
     const communicationMetrics = analyzeResponse(answer);
 
-    // Prompt Gemini for answer evaluation and next question generation
+    // Prompt OpenAI for answer evaluation and next question generation
     const isLastQuestion = currentIdx + 1 >= session.maxQuestions;
 
     const evaluationPrompt = `You are a professional interviewer for the role: ${session.level} ${session.role} (${session.category} category).
@@ -149,19 +151,21 @@ Provide your response in JSON format. The response must follow this schema:
   "nextQuestion": "${isLastQuestion ? '' : '<the next question for the candidate, keep it under 50 words>'}"
 }`;
 
-    const geminiResult = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: evaluationPrompt }] }],
-      generationConfig: {
-        responseMimeType: 'application/json'
-      }
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'user', content: evaluationPrompt }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.5
     });
 
-    const evalJsonText = geminiResult.response.text();
+    const evalJsonText = response.choices[0].message.content;
     let evaluation;
     try {
       evaluation = JSON.parse(evalJsonText);
     } catch (parseError) {
-      console.error('Failed to parse Gemini JSON output:', evalJsonText);
+      console.error('Failed to parse OpenAI JSON output:', evalJsonText);
       // Fallback evaluation structure if JSON parse fails
       evaluation = {
         score: 70,
@@ -225,12 +229,12 @@ app.post('/api/sessions/:id/end', async (req, res) => {
       session.endTime = new Date().toISOString();
     }
 
-    let model;
+    let openai;
     try {
-      model = getGeminiModel(req);
+      openai = getOpenAIClient();
     } catch (err) {
       if (err.message === 'API_KEY_MISSING') {
-        return res.status(401).json({ error: 'Gemini API Key is missing. Please configure it in your settings.' });
+        return res.status(401).json({ error: 'OpenAI API Key is missing. Please configure it in your backend environment.' });
       }
       throw err;
     }
@@ -280,14 +284,16 @@ Provide your response in JSON format. The response must follow this schema:
   ]
 }`;
 
-    const geminiResult = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: finalReportPrompt }] }],
-      generationConfig: {
-        responseMimeType: 'application/json'
-      }
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'user', content: finalReportPrompt }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.6
     });
 
-    const reportJsonText = geminiResult.response.text();
+    const reportJsonText = response.choices[0].message.content;
     let finalReport;
     try {
       finalReport = JSON.parse(reportJsonText);
