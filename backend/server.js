@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import OpenAI from 'openai';
+import Groq from 'groq-sdk';
 import { analyzeResponse } from './analyzer.js';
 
 dotenv.config();
@@ -24,13 +24,13 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
-// Helper to get OpenAI Client
-function getOpenAIClient() {
-  const apiKey = process.env.OPENAI_API_KEY;
+// Helper to get Groq Client
+function getGroqClient() {
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     throw new Error('API_KEY_MISSING');
   }
-  return new OpenAI({ apiKey });
+  return new Groq({ apiKey });
 }
 
 // 1. Start a Session
@@ -38,12 +38,12 @@ app.post('/api/sessions', async (req, res) => {
   try {
     const { role, level, category, jobDescription, maxQuestions = 5 } = req.body;
     
-    let openai;
+    let groq;
     try {
-      openai = getOpenAIClient();
+      groq = getGroqClient();
     } catch (err) {
       if (err.message === 'API_KEY_MISSING') {
-        return res.status(401).json({ error: 'OpenAI API Key is missing. Please configure it in your backend environment.' });
+        return res.status(401).json({ error: 'Groq API Key is missing. Please configure it in your backend environment.' });
       }
       throw err;
     }
@@ -54,8 +54,8 @@ Role: ${level} ${role}
 Interview Category: ${category}
 ${jobDescription ? `Job Description:\n${jobDescription}` : ''}`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: 'Generate the first realistic, challenging, and suitable interview question. Do NOT include any introduction like "Hello, welcome to your interview." Just output the question itself. Keep the question under 50 words.' }
@@ -115,12 +115,12 @@ app.post('/api/sessions/:id/answer', async (req, res) => {
       return res.status(400).json({ error: 'Session is already finished' });
     }
 
-    let openai;
+    let groq;
     try {
-      openai = getOpenAIClient();
+      groq = getGroqClient();
     } catch (err) {
       if (err.message === 'API_KEY_MISSING') {
-        return res.status(401).json({ error: 'OpenAI API Key is missing. Please configure it in your backend environment.' });
+        return res.status(401).json({ error: 'Groq API Key is missing. Please configure it in your backend environment.' });
       }
       throw err;
     }
@@ -131,7 +131,7 @@ app.post('/api/sessions/:id/answer', async (req, res) => {
     // Run local communication & NLP analysis (filler words, pace, lexical diversity, tone)
     const communicationMetrics = analyzeResponse(answer);
 
-    // Prompt OpenAI for answer evaluation and next question generation
+    // Prompt Groq for answer evaluation and next question generation
     const isLastQuestion = currentIdx + 1 >= session.maxQuestions;
 
     const evaluationPrompt = `You are a professional interviewer for the role: ${session.level} ${session.role} (${session.category} category).
@@ -151,8 +151,8 @@ Provide your response in JSON format. The response must follow this schema:
   "nextQuestion": "${isLastQuestion ? '' : '<the next question for the candidate, keep it under 50 words>'}"
 }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'user', content: evaluationPrompt }
       ],
@@ -165,7 +165,7 @@ Provide your response in JSON format. The response must follow this schema:
     try {
       evaluation = JSON.parse(evalJsonText);
     } catch (parseError) {
-      console.error('Failed to parse OpenAI JSON output:', evalJsonText);
+      console.error('Failed to parse Groq JSON output:', evalJsonText);
       // Fallback evaluation structure if JSON parse fails
       evaluation = {
         score: 70,
@@ -229,12 +229,12 @@ app.post('/api/sessions/:id/end', async (req, res) => {
       session.endTime = new Date().toISOString();
     }
 
-    let openai;
+    let groq;
     try {
-      openai = getOpenAIClient();
+      groq = getGroqClient();
     } catch (err) {
       if (err.message === 'API_KEY_MISSING') {
-        return res.status(401).json({ error: 'OpenAI API Key is missing. Please configure it in your backend environment.' });
+        return res.status(401).json({ error: 'Groq API Key is missing. Please configure it in your backend environment.' });
       }
       throw err;
     }
@@ -284,8 +284,8 @@ Provide your response in JSON format. The response must follow this schema:
   ]
 }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'user', content: finalReportPrompt }
       ],
